@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nandy's Delights - Seletor de Salgados</title>
+    <!-- Carrega o Tailwind CSS para estilização -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f3f0; /* Fundo suave */
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        /* Cor principal inspirada no logo: um vermelho escuro e apetitoso */
+        .brand-red { background-color: #b42318; }
+        .brand-text-red { color: #b42318; }
+        .brand-border-red { border-color: #b42318; }
+        /* Animação de Pulsar para a Oferta */
+        @keyframes pulse-promo {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        .animate-pulse-promo {
+            animation: pulse-promo 2s infinite ease-in-out;
+        }
+        /* Estilos para a lista de itens (Removidos para usar apenas classes Tailwind) */
+        
+        /* Estilo para a transição do modal */
+        .modal-transition {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .modal-exit {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .modal-exit-active {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- App Container -->
+    <div id="app" class="w-full max-w-xl bg-white shadow-2xl rounded-2xl p-6 md:p-10 border-4 brand-border-red">
+        <!-- O conteúdo será injetado aqui pelo JavaScript -->
+    </div>
+
+    <!-- Custom Modal for Alerts/Messages (Simulação de Encomenda) -->
+    <!-- Este elemento é usado para substituir a função alert() proibida -->
+    <div id="custom-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full modal-transition modal-enter" id="modal-content">
+            <h3 class="text-2xl font-bold brand-text-red mb-4" id="modal-title"></h3>
+            <p class="text-gray-700 mb-6" id="modal-body"></p>
+            <button id="modal-close-btn" class="w-full brand-red text-white p-3 rounded-xl font-semibold hover:bg-red-700 transition duration-300">
+                Entendi
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Dados do menu COMPLETO
+        const menuData = {
+            chicken: {
+                title_pt: "Clássicos de Frango",
+                title_de: "Klassiker mit Huhn",
+                icon: "🐔",
+                items: [
+                    { pt: "Coxinha de frango tradicional", de: "Klassische Hühner-Teigtäschechen" },
+                    // Corrigido: "com" para "mit"
+                    { pt: "Coxinha de frango com catupiry", de: "Hühner-Teigtäschechen mit Catupiry-Frischkäse" }
+                ]
+            },
+            meat: {
+                title_pt: "Recheios de Carne",
+                title_de: "Fleischfüllungen",
+                icon: "🥩",
+                items: [
+                    // CORRIGIDO: "com Hackfleischfüllung" para "mit Hackfleischfüllung"
+                    { pt: "Travesseirinho de carne moída", de: "Teigtäschchen mit Hackfleischfüllung" },
+                    // CORRIGIDO: "com Cheddar und Speck" para "mit Cheddar und Speck"
+                    { pt: "Travesseirinho de cheddar com bacon", de: "Teigtäschchen mit Cheddar und Speck" },
+                    { pt: "Quibe de carne tradicional", de: "Klassischer Rinder-Kibbeh" },
+                    // CORRIGIDO: "com Cheddar" para "mit Cheddar"
+                    { pt: "Quibe de carne com cheddar", de: "Rinder-Kibbeh mit Cheddar" }
+                ]
+            },
+            cheese: {
+                title_pt: "Queijos e Cremosos",
+                title_de: "Käse und Cremiges",
+                icon: "🧀",
+                items: [
+                    // CORRIGIDO: "com Kräutern" para "mit Kräutern"
+                    { pt: "Bolinha de queijo mussarela com ervas", de: "Mozzarella-Käsebällchen mit Kräutern" },
+                    { pt: "Bolinha de presunto e queijo", de: "Schinken-Käsebällchen" },
+                    // Corrigido (redundante, mas mantendo a correção para evitar regressão)
+                    { pt: "Travesseirinho de cheddar com bacon", de: "Teigtäschchen mit Cheddar und Speck" }
+                    
+                ]
+            },
+            veggie: {
+                title_pt: "Opções Vegetarianas",
+                title_de: "Vegetarische Optionen",
+                icon: "🌱",
+                items: [
+                    // CORRIGIDO: "com Käse" para "mit Käse"
+                    { pt: "Coxinha de brócolis com queijo", de: "Brokkoli-Coxinha mit Käse" },
+                    // CORRIGIDO: "com Knoblauch" para "mit Knoblauch"
+                    { pt: "Coxinha de queijo com alho", de: "Käse-Coxinha mit Knoblauch" },
+                    { pt: "Travesseirinho de palmito cremoso", de: "Teigtäschchen com cremiger Palmenherz-Füllung" }, // Aqui o "com" é correto, pois é parte de uma descrição mais longa que se refere a "cremoso"
+                   { pt: "Croquete de milho", de: "Mais-Kroketten" }
+                ]
+            },
+            other: {
+                title_pt: "Outros Sabores Diferentes",
+                title_de: "Andere besondere Geschmacksrichtungen",
+                icon: "🌶️",
+                items: [
+                    { pt: "Bolinha de calabresa com queijo", de: "Calabresa-Käsebällchen" },
+                    { pt: "Pão de queijo", de: "Käsebrötchen (Pão de Queijo)" },
+                    // CORRIGIDO: "com Guavenpaste" para "mit Guavenpaste"
+                    { pt: "Pão de queijo com goiabada", de: "Käsebrötchen mit Guavenpaste" }
+                ]
+            }
+        };
+
+        // NOVO TEXTO DA PROMOÇÃO COM O VALOR EM FRANCOS/CHF E REGRAS COMPLETAS
+        const PROMO_TEXT_PT = "O CENTO POR APENAS 99,90 FRANCOS.";
+        // Usamos uma estrutura para colocar as regras completas. O separador '|' não é mais necessário,
+        // pois o texto será exibido em múltiplas linhas ou em um formato mais limpo.
+        const PROMO_RULES_PT = "Comprando 100 salgados (1 cento) ou mais, a entrega é grátis num raio de 5 km. Comprando menos de 1 cento, a entrega custa 15,00 FRANCOS e a unidade sai por 1,00 FRANCO.";
+
+        const PROMO_TEXT_DE = "100 STÜCK FÜR NUR 99,90 CHF.";
+        const PROMO_RULES_DE = "Ab 100 Snacks (1 Hundert) ist die Lieferung im Umkreis von 5 km kostenlos. Bei weniger als 1 Hundert kostet die Lieferung 15,00 CHF und die Einheit 1,00 CHF.";
+
+        // NOVO: Número de WhatsApp
+        const WHATSAPP_NUMBER = "41798127514";
+
+
+        const appDiv = document.getElementById('app');
+
+        // --- Lógica do Modal Customizado (Substituindo alert()) ---
+        const customModal = document.getElementById('custom-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const modalContent = document.getElementById('modal-content');
+
+        /**
+         * Exibe o modal customizado com título e mensagem.
+         * @param {string} title Título da mensagem.
+         * @param {string} message Corpo da mensagem.
+         */
+        function showCustomMessage(title, message) {
+            modalTitle.textContent = title;
+            modalBody.textContent = message;
+            
+            customModal.classList.remove('hidden');
+            modalContent.classList.remove('modal-enter');
+            modalContent.classList.add('modal-enter-active');
+        }
+
+        if (modalCloseBtn) {
+            modalCloseBtn.addEventListener('click', () => {
+                modalContent.classList.remove('modal-enter-active');
+                modalContent.classList.add('modal-enter');
+                setTimeout(() => customModal.classList.add('hidden'), 300);
+            });
+        }
+        // --- Fim da Lógica do Modal Customizado ---
+
+
+        // Função para simular o "delay" de carregamento
+        function showLoading(show) {
+            let loadingDiv = document.getElementById('loading-overlay');
+            if (!loadingDiv) {
+                loadingDiv = document.createElement('div');
+                loadingDiv.id = 'loading-overlay';
+                // Garante que o spinner de loading fique por cima do conteúdo
+                loadingDiv.className = 'absolute inset-0 bg-white bg-opacity-80 flex items-center justify-center transition-opacity duration-300 rounded-xl z-10';
+                loadingDiv.innerHTML = '<div class="flex flex-col items-center"><div class="animate-spin rounded-full h-12 w-12 border-4 border-t-4 brand-border-red border-t-white"></div><p class="mt-4 brand-text-red font-bold">Preparando sua delícia...</p></div>';
+                appDiv.style.position = 'relative';
+                appDiv.appendChild(loadingDiv);
+            }
+            loadingDiv.style.opacity = show ? '1' : '0';
+            loadingDiv.style.pointerEvents = show ? 'auto' : 'none';
+        }
+
+        /**
+         * Coleta os dados do pedido e redireciona para o WhatsApp.
+         * @param {string} categoryKey A chave da categoria atual (ex: 'chicken').
+         */
+        function placeOrder(categoryKey) {
+            const items = menuData[categoryKey].items;
+            let orderSummary = [];
+            let totalUnits = 0;
+
+            items.forEach((item, index) => {
+                const inputId = `qty-${categoryKey}-${index}`;
+                const inputElement = document.getElementById(inputId);
+                
+                if (inputElement) {
+                    const quantity = parseInt(inputElement.value, 10);
+                    
+                    if (quantity > 0) {
+                        orderSummary.push(`${quantity}x ${item.pt}`);
+                        totalUnits += quantity;
+                    }
+                }
+            });
+
+            if (totalUnits === 0) {
+                showCustomMessage(
+                    "Selecione os Salgados", 
+                    "Por favor, escolha a quantidade desejada de pelo menos um salgado antes de encomendar. Danke!"
+                );
+                return;
+            }
+
+            // Constrói a mensagem formatada para o WhatsApp
+            let message = `Olá Nandy's Delights! Gostaria de fazer um pedido da categoria "${menuData[categoryKey].title_pt}".\n\n`;
+            message += "Detalhes do Pedido:\n";
+            message += "---------------------\n";
+            message += orderSummary.join("\n");
+            message += `\n\nTotal de Unidades: ${totalUnits} salgados.`;
+            message += "\n\nPor favor, confirme a disponibilidade e o valor total com frete. Obrigado!";
+            
+            // Codifica a mensagem e constrói o link do WhatsApp
+            const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+            
+            // Abre o link do WhatsApp
+            window.open(whatsappUrl, '_blank');
+        }
+
+
+        // Função que renderiza a tela inicial
+        function renderHome() {
+            // Cria um array com as chaves das categorias
+            const categoryKeys = Object.keys(menuData);
+            
+            // Renderiza as categorias.
+            const categoriesHtml = categoryKeys.map((key) => {
+                // Nova lógica para garantir 2 colunas, exceto o último, que usa col-span-2 e tem cor diferente.
+                const buttonColorClass = (key === 'other') ? 'bg-yellow-600' : 'brand-red';
+                const buttonSpanClass = (key === 'other') ? 'col-span-2 mt-4' : '';
+
+                return `
+                    <button data-category="${key}"
+                        class="category-btn ${buttonSpanClass} p-4 ${buttonColorClass} text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition duration-300 text-left flex items-center justify-between">
+                        <div>
+                            <span class="text-lg">${menuData[key].title_pt}</span><br>
+                            <span class="text-sm opacity-80">${menuData[key].title_de}</span>
+                        </div>
+                        <span class="text-2xl">${menuData[key].icon}</span>
+                    </button>
+                `;
+            }).join('');
+
+
+            appDiv.innerHTML = `
+                <!-- Header (Logotipo) -->
+                <div class="flex flex-col items-center mb-6">
+                    <!-- Logo placeholder com ícone de chef -->
+                    <div class="w-56 h-56 mb-4 rounded-full brand-red flex items-center justify-center border-4 border-white p-1 shadow-inner">
+                        <img src="WhatsApp Image 2025-09-26 at 17.37.35-Photoroom.png" alt="logo">                    </div>
+
+
+
+                    <h1 class="text-3xl font-extrabold brand-text-red">NANDY'S DELIGHTS</h1>
+                    <p class="text-gray-500 text-sm italic">"FOOD MADE WITH LOVE, SERVED WITH CARE"</p>
+                </div>
+
+                <!-- Banner da Promoção -->
+                <div class="brand-red text-white p-3 rounded-xl mb-6 text-center shadow-xl animate-pulse-promo border-2 border-yellow-300">
+                    <p class="font-bold text-xl">${PROMO_TEXT_PT}</p>
+                    <p class="text-lg font-bold">${PROMO_TEXT_DE}</p>
+                    <div class="mt-2 pt-2 border-t border-white border-opacity-30">
+                        <!-- Aumentado para text-base -->
+                        <p class="text-base text-left">${PROMO_RULES_PT}</p>
+                        <!-- Aumentado para text-base e mantido italic -->
+                        <p class="text-base text-left mt-1 italic">${PROMO_RULES_DE}</p>
+                    </div>
+                </div>
+
+
+                <!-- Pergunta Interativa -->
+                <h2 class="text-xl md:text-2xl font-bold text-gray-800 text-center mb-6">
+                    Selecione a Categoria para ver o Cardápio Completo:<br>
+                    <!-- TEXTO ALEMÃO ATUALIZADO: -->
+                    <span class="text-lg text-gray-600 font-normal">Wählen Sie die Kategorie aus, um das vollständige Menü anzuzeigen:</span>
+                </h2>
+
+                <!-- Opções (Botões de Categoria) -->
+                <div class="grid grid-cols-2 gap-4">
+                    ${categoriesHtml}
+                </div>
+            `;
+
+            // Adiciona Event Listeners aos botões
+            document.querySelectorAll('.category-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const category = e.currentTarget.dataset.category;
+                    showLoading(true);
+                    setTimeout(() => {
+                        renderResult(category);
+                        showLoading(false);
+                    }, 1200); // Simula o tempo de processamento/vídeo
+                });
+            });
+        }
+
+        // Função que renderiza o resultado, mostrando todos os itens da categoria
+        function renderResult(categoryKey) {
+            const category = menuData[categoryKey];
+            
+            // Mapeia os itens para a lista HTML
+            const itemListHtml = category.items.map((item, index) => `
+                <!-- Estrutura flex para colocar o nome e o seletor lado a lado -->
+                <li class="flex justify-between items-center py-3 border-b border-white border-opacity-30 last:border-b-0">
+                    
+                    <!-- Nome do Item (Português e Alemão) -->
+                    <div class="flex flex-col text-left mr-2">
+                        <span class="font-bold text-lg">${item.pt}</span>
+                        <span class="text-sm opacity-80">${item.de}</span>
+                    </div>
+                    
+                    <!-- Elemento de Seleção de Unidade -->
+                    <div class="flex items-center space-x-2 bg-white text-gray-800 p-2 rounded-xl shadow-md min-w-[150px]">
+                        <label for="qty-${categoryKey}-${index}" class="text-sm font-semibold whitespace-nowrap text-red-700">Unidade/Einheit:</label>
+                        <!-- Campo de input para a quantidade -->
+                        <input id="qty-${categoryKey}-${index}" type="number" min="0" value="0"
+                            class="w-16 p-1 text-center text-gray-800 rounded border-2 border-red-200 focus:border-red-500 focus:ring-2 focus:ring-red-300 focus:ring-opacity-50 transition duration-150 bg-gray-50" />
+                    </div>
+                </li>
+            `).join('');
+
+
+            appDiv.innerHTML = `
+                <div class="flex flex-col items-center text-center">
+                    <div class="text-6xl mb-6">${category.icon}</div>
+
+                    <!-- Título da Categoria -->
+                    <h2 class="text-3xl md:text-4xl font-extrabold brand-text-red mb-1">
+                        ${category.title_pt}
+                    </h2>
+                    <p class="text-lg text-gray-700 font-semibold mb-6">
+                        ${category.title_de}
+                    </p>
+
+                    <!-- Lista Completa de Itens -->
+                    <div class="brand-red text-white rounded-xl w-full shadow-2xl p-6 mb-8 text-left">
+                        <!-- Usando classes utilitárias para espaçamento e separação -->
+                        <ul class="space-y-1"> 
+                            ${itemListHtml}
+                        </ul>
+                    </div>
+
+                    <!-- Call to Action -->
+                    <div class="mt-4 w-full">
+                        <p class="text-gray-600 mb-4 text-md font-semibold">
+                            <!-- TEXTO COM ITALICO PARA O ALEMÃO -->
+                            Pronto para o seu Cento Misto? Aproveite a super promoção: <span class="italic">Bereit für Ihren Cento Misto? Profitieren Sie von dieser Super-Aktion:</span>
+                        </p>
+                        <!-- AQUI MOSTRA O TEXTO PRINCIPAL DA PROMOÇÃO (PT) -->
+                        <p class="text-xl font-extrabold brand-text-red mb-1">${PROMO_TEXT_PT}</p>
+                        <!-- AQUI MOSTRA O TEXTO PRINCIPAL DA PROMOÇÃO (DE) -->
+                        <p class="text-lg font-bold brand-text-red mb-4">${PROMO_TEXT_DE}</p>
+                        
+                        <!-- AQUI MOSTRA AS REGRAS DETALHADAS -->
+                        <div class="text-left text-sm text-gray-600 space-y-1 mb-4 p-3 bg-gray-100 rounded-lg">
+                            <!-- Rótulo PT -->
+                            <p class="font-semibold text-gray-800">Regras de Entrega:</p>
+                            <!-- Adicionado text-base -->
+                            <p class="text-base">${PROMO_RULES_PT}</p>
+                            <!-- Rótulo DE ALTERADO para "Lieferregeln:" -->
+                            <p class="font-semibold text-gray-800 mt-2">Lieferregeln:</p>
+                            <!-- Adicionado text-base e mantido italic -->
+                            <p class="text-base italic">${PROMO_RULES_DE}</p>
+                        </div>
+
+                        <!-- Botão de Encomenda - NOVO: chama placeOrder(categoryKey) -->
+                        <button id="order-now-btn" data-category-key="${categoryKey}"
+                            class="inline-block w-full bg-green-600 text-white p-3 font-bold rounded-xl shadow-md hover:bg-green-700 transition duration-300 transform hover:scale-[1.01] uppercase tracking-wider">
+                            QUERO ENCOMENDAR AGORA/ICH MÖCHTE JETZT BESTELLEN
+                        </button>
+
+                        <button id="restart-btn"
+                            class="w-full mt-3 bg-gray-700 text-white p-3 font-bold rounded-xl shadow-md hover:bg-gray-800 transition duration-300 transform hover:scale-[1.01]">
+                            Escolher Outra Categoria / Wählen Sie eine andere Kategorie
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // NOVO: Adiciona um Event Listener ao botão de Encomenda que chama a função placeOrder
+            document.getElementById('order-now-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                const currentCategoryKey = e.currentTarget.dataset.categoryKey;
+                placeOrder(currentCategoryKey);
+            });
+
+            // Adiciona um Event Listener ao botão de Recomeçar
+            document.getElementById('restart-btn').addEventListener('click', () => {
+                showLoading(true);
+                setTimeout(() => {
+                    renderHome();
+                    showLoading(false);
+                }, 800);
+            });
+        }
+
+        // Inicializa a aplicação
+        window.onload = function() {
+            renderHome();
+        };
+
+    </script>
+
+</body>
+</html>
